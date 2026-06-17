@@ -163,6 +163,14 @@
 
     .sizes{gap:7px}.size{min-width:60px;padding:9px 12px}
   }
+  .ls-warn{display:none;background:rgba(232,161,58,.12);border:1px solid var(--amber);color:var(--amber-soft);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:18px}
+  .evt-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--asphalt-soft);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:22px}
+  .evt-pick{display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px}
+  .evt-pick label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog);font-weight:700}
+  #eventoSel{background:var(--asphalt);color:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:16px;font-weight:700;width:100%}
+  #eventoSel:focus{outline:none;border-color:var(--amber)}
+  .evt-actions{display:flex;gap:8px;flex-wrap:wrap}
+  @media(max-width:640px){.evt-actions{width:100%}.evt-actions button{flex:1}}
 </style>
 </head>
 <body>
@@ -170,7 +178,7 @@
   <header>
     <div class="eyebrow">Riepilogo privato organizzatori</div>
     <h1 id="pageTitle">Conta Raduno <span class="km" id="pageSub">incolla la lista, gestisci l'evento</span></h1>
-    <p class="sub">Incolla la lista del gruppo WhatsApp. Puoi correggere ogni partecipante, segnare i pagamenti, e salvare il registro per ritrovarlo domani. Reincollando la lista cresciuta, pagamenti e correzioni restano. Tutto sul tuo dispositivo, niente online.</p>
+    <p class="sub">Gestisci più eventi in parallelo: scegli l'evento attivo qui sotto, incolla la lista del gruppo WhatsApp, correggi i partecipanti e segna i pagamenti. Tutto viene salvato automaticamente nel browser di questo dispositivo. Fai ogni tanto un backup con "Esporta tutti".</p>
     <button id="adminBtn" class="admin-toggle" onclick="toggleAdmin()">🔒 Modalità admin</button>
     <div id="pinBox" class="pin-box">
       <input id="pinInput" class="pin-input" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off"
@@ -179,10 +187,24 @@
     </div>
   </header>
 
+  <div id="lsWarn" class="ls-warn">⚠ Stai usando un'anteprima che non salva i dati tra le sessioni. Scarica il file e aprilo nel browser (o pubblicalo online) per attivare la memoria e la gestione multi-evento.</div>
+
+  <div class="evt-bar">
+    <div class="evt-pick">
+      <label for="eventoSel">Evento attivo</label>
+      <select id="eventoSel" onchange="onSelettoreChange(this.value)"></select>
+    </div>
+    <div class="evt-actions">
+      <button onclick="esportaTutti()" title="Backup di tutti gli eventi">💾 Esporta tutti</button>
+      <button onclick="document.getElementById('importAll').click()" title="Ripristina da backup">📂 Importa</button>
+      <input type="file" id="importAll" accept=".json" style="display:none" onchange="importaTutti(event)">
+    </div>
+  </div>
+
   <div class="grid">
     <div class="panel">
       <h2><span class="n">1</span>Lista WhatsApp</h2>
-      <textarea id="input" placeholder="Incolla qui la lista dal gruppo WhatsApp, es:
+      <textarea id="input" oninput="inputAutosave()" placeholder="Incolla qui la lista dal gruppo WhatsApp, es:
 1-Mario Rossi    L
 2-Anna Bianchi    M
 ..."></textarea>
@@ -203,6 +225,7 @@
         </div>
         <div class="btnrow" style="margin-top:10px">
           <button class="primary" onclick="applicaImpostazioni()">Applica</button>
+          <button class="ghost" onclick="eliminaEventoAttivo()">🗑 Elimina evento</button>
         </div>
       </div>
       <div class="save-row">
@@ -239,6 +262,11 @@ function applicaImpostazioni(){
   if(kp&&kp.value!=='')P_PRANZO=Math.max(0,parseFloat(kp.value)||0);
   if(kk&&kk.value!=='')P_KIT=Math.max(0,parseFloat(kk.value)||0);
   if(kt&&kt.value!=='')P_TS=Math.max(0,parseFloat(kt.value)||0);
+  // aggiorno il nome dell'evento attivo nel selettore
+  if(eventoAttivo){
+    const ev=leggiEventi();
+    if(ev[eventoAttivo]){ev[eventoAttivo].nome=EVENTO_NOME;scriviEventi(ev);rebuildSelettore();}
+  }
   aggiornaTitolo();
   calcola();
   toast('Impostazioni applicate');
@@ -274,6 +302,173 @@ const resolveSosp={};
 const sospDraft={};
 // freebie[nomeKey]=true -> FREE: importo azzerato, detratto dal montante. staff[nomeKey]=true -> etichetta staff
 const freebie={}, staff={};
+
+// ===================== MULTI-EVENTO (memoria nel browser) =====================
+// Ogni evento è salvato in localStorage. Struttura:
+//   localStorage['raduno_eventi'] = JSON di { eventoId: {nome,prezzi,lista,pagato,override,dropTshirt,resolveSosp,freebie,staff}, ... }
+//   localStorage['raduno_attivo'] = id dell'evento correntemente aperto
+const LS_EVENTI='raduno_eventi', LS_ATTIVO='raduno_attivo';
+let eventoAttivo=null;       // id dell'evento aperto
+let _autosaveOn=false;       // evita salvataggi durante il caricamento
+
+function lsDisponibile(){
+  try{const k='__t';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch(e){return false;}
+}
+function leggiEventi(){
+  try{return JSON.parse(localStorage.getItem(LS_EVENTI)||'{}');}catch(e){return {};}
+}
+function scriviEventi(obj){
+  try{localStorage.setItem(LS_EVENTI,JSON.stringify(obj));return true;}catch(e){toast('Memoria browser piena o non disponibile');return false;}
+}
+function statoCorrente(){
+  return {
+    nome:EVENTO_NOME, prezzi:{pranzo:P_PRANZO,kit:P_KIT,ts:P_TS},
+    lista:document.getElementById('input').value,
+    pagato:{...pagato}, override:{...override}, dropTshirt:{...dropTshirt},
+    resolveSosp:{...resolveSosp}, freebie:{...freebie}, staff:{...staff}
+  };
+}
+function applicaStato(s){
+  s=s||{};
+  EVENTO_NOME=s.nome||'';
+  if(s.prezzi){P_PRANZO=s.prezzi.pranzo??38;P_KIT=s.prezzi.kit??18;P_TS=s.prezzi.ts??12;}
+  else{P_PRANZO=38;P_KIT=18;P_TS=12;}
+  document.getElementById('input').value=s.lista||'';
+  const reset=o=>{for(const k in o)delete o[k];};
+  reset(pagato);Object.assign(pagato,s.pagato||{});
+  reset(override);Object.assign(override,s.override||{});
+  reset(dropTshirt);Object.assign(dropTshirt,s.dropTshirt||{});
+  reset(resolveSosp);Object.assign(resolveSosp,s.resolveSosp||{});
+  reset(freebie);Object.assign(freebie,s.freebie||{});
+  reset(staff);Object.assign(staff,s.staff||{});
+  syncImpostazioniUI();
+}
+// salva lo stato corrente nell'evento attivo (chiamato automaticamente a ogni modifica)
+function autosave(){
+  if(!_autosaveOn||!eventoAttivo)return;
+  const ev=leggiEventi();
+  ev[eventoAttivo]=statoCorrente();
+  scriviEventi(ev);
+}
+let _inputT;
+function inputAutosave(){
+  if(!_autosaveOn||!eventoAttivo)return;
+  clearTimeout(_inputT);
+  _inputT=setTimeout(autosave,600); // salva la lista digitata anche senza premere Calcola
+}
+function nuovoId(){return 'ev_'+Date.now()+'_'+Math.floor(Math.random()*1000);}
+
+function creaEvento(nome){
+  const ev=leggiEventi();
+  const id=nuovoId();
+  ev[id]={nome:nome||'Nuovo evento',prezzi:{pranzo:38,kit:18,ts:12},lista:'',pagato:{},override:{},dropTshirt:{},resolveSosp:{},freebie:{},staff:{}};
+  scriviEventi(ev);
+  return id;
+}
+function apriEvento(id){
+  const ev=leggiEventi();
+  if(!ev[id])return;
+  _autosaveOn=false;
+  eventoAttivo=id;
+  try{localStorage.setItem(LS_ATTIVO,id);}catch(e){}
+  applicaStato(ev[id]);
+  _autosaveOn=true;
+  rebuildSelettore();
+  calcola();
+}
+function rinominaEventoAttivo(){
+  if(!eventoAttivo)return;
+  const ev=leggiEventi();
+  const att=ev[eventoAttivo];
+  const nuovo=(document.getElementById('cfgNome')?.value||'').trim();
+  if(nuovo){att.nome=nuovo;EVENTO_NOME=nuovo;scriviEventi(ev);rebuildSelettore();}
+}
+function eliminaEventoAttivo(){
+  if(!eventoAttivo)return;
+  const ev=leggiEventi();
+  const nome=ev[eventoAttivo]?.nome||'questo evento';
+  if(!confirm('Eliminare definitivamente l\'evento "'+nome+'"?\nConsiglio: fai prima un backup con "Esporta tutti".'))return;
+  delete ev[eventoAttivo];
+  scriviEventi(ev);
+  const ids=Object.keys(ev);
+  if(ids.length){apriEvento(ids[0]);}
+  else{const id=creaEvento('Nuovo evento');apriEvento(id);}
+  toast('Evento eliminato');
+}
+function onSelettoreChange(val){
+  if(val==='__new__'){
+    const nome=(prompt&&prompt('Nome del nuovo evento:'))||'';
+    // prompt può non funzionare su mobile: se vuoto, creo comunque con nome generico
+    const id=creaEvento(nome.trim()||'Nuovo evento '+(Object.keys(leggiEventi()).length+1));
+    apriEvento(id);
+    toast('Evento creato');
+  }else{
+    apriEvento(val);
+  }
+}
+function rebuildSelettore(){
+  const sel=document.getElementById('eventoSel');
+  if(!sel)return;
+  const ev=leggiEventi();
+  const ids=Object.keys(ev);
+  let html=ids.map(id=>'<option value="'+id+'"'+(id===eventoAttivo?' selected':'')+'>'+escHtml(ev[id].nome||'(senza nome)')+'</option>').join('');
+  html+='<option value="__new__">➕ Nuovo evento…</option>';
+  sel.innerHTML=html;
+}
+
+// backup: esporta TUTTI gli eventi in un unico file
+function esportaTutti(){
+  const ev=leggiEventi();
+  if(Object.keys(ev).length===0){toast('Nessun evento da esportare');return;}
+  const blob=new Blob([JSON.stringify({tipo:'raduno_backup',versione:1,salvato:new Date().toISOString(),eventi:ev},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='backup_eventi_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('Backup di tutti gli eventi scaricato');
+}
+function importaTutti(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      let eventi;
+      if(d&&d.tipo==='raduno_backup'&&d.eventi)eventi=d.eventi;       // backup multi-evento
+      else if(d&&d.lista!==undefined){                                 // vecchio registro singolo: importo come 1 evento
+        const id=nuovoId();eventi={};eventi[id]={nome:d.evento||'Evento importato',prezzi:d.prezzi||{pranzo:38,kit:18,ts:12},lista:d.lista,pagato:d.pagato||{},override:d.override||{},dropTshirt:d.dropTshirt||{},resolveSosp:d.resolveSosp||{},freebie:d.freebie||d.omaggio||{},staff:d.staff||{}};
+      }else{toast('File non riconosciuto');return;}
+      // unisco agli eventi esistenti (i nuovi si aggiungono, stessi id sovrascrivono)
+      const att=leggiEventi();
+      Object.assign(att,eventi);
+      scriviEventi(att);
+      const primo=Object.keys(eventi)[0];
+      apriEvento(primo);
+      toast('Eventi importati');
+    }catch(e){toast('File non valido');}
+  };
+  r.readAsText(f);ev.target.value='';
+}
+
+// inizializzazione all'avvio
+function initEventi(){
+  if(!lsDisponibile()){
+    // ambiente senza localStorage (es. anteprima artifact): lavoro in memoria, niente persistenza
+    document.getElementById('lsWarn').style.display='block';
+    _autosaveOn=false;
+    return;
+  }
+  let ev=leggiEventi();
+  let ids=Object.keys(ev);
+  if(ids.length===0){
+    // primo avvio: creo i tre eventi che l'utente sta gestendo
+    ['Tiger for Passion 26','Classic for Passion 26','Summer Night 26'].forEach(n=>creaEvento(n));
+    ev=leggiEventi();ids=Object.keys(ev);
+  }
+  const salvato=localStorage.getItem(LS_ATTIVO);
+  const idIniziale=(salvato&&ev[salvato])?salvato:ids[0];
+  apriEvento(idIniziale);
+}
+// =============================================================================
+
 
 // === Modalità admin ===
 // PIN per mostrare le icone Free/Staff. Cambialo con quello che vuoi.
@@ -407,6 +602,7 @@ function calcola(){
   const duplicati=Object.entries(numMap).filter(([n,arr])=>arr.length>1).map(([n,arr])=>({num:n,nomi:arr}));
 
   render({ok,sosp,errs,intest,footer,duplicati});
+  autosave();
 }
 
 // indice di occorrenza per distinguere omonimi (Gaetano Mancini #1 e #2)
@@ -824,6 +1020,9 @@ let toastT;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),1800);}
 function escHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function escAttr(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+
+// avvio: inizializza il sistema multi-evento (crea i 3 eventi al primo uso, ripristina l'ultimo aperto)
+initEventi();
 </script>
 </body>
 </html>
