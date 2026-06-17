@@ -42,6 +42,8 @@
   .cfg-grid label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--fog);font-weight:600}
   .cfg-grid input{background:var(--asphalt);color:var(--paper);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:14px}
   .cfg-grid input:focus{outline:none;border-color:var(--amber)}
+  .save-note{font-size:12.5px;color:var(--fog);line-height:1.55;margin:0}
+  .save-note b{color:var(--paper)}
   .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
   @media(min-width:620px){.stats{grid-template-columns:repeat(4,1fr)}}
   .stat{background:var(--asphalt);border:1px solid var(--line);border-radius:11px;padding:15px}
@@ -229,11 +231,10 @@
         </div>
       </div>
       <div class="save-row">
-        <div class="lab">Registro (pagamenti + correzioni)</div>
-        <div class="btnrow" style="margin-top:0">
-          <button onclick="salvaRegistro()">💾 Salva registro</button>
-          <button onclick="document.getElementById('loadfile').click()">📂 Carica registro</button>
-          <input type="file" id="loadfile" accept=".json" style="display:none" onchange="caricaRegistro(event)">
+        <div class="lab">Salvataggio</div>
+        <p class="save-note">✓ La pagina <b>salva da sola</b> nel browser a ogni modifica: chiudi e riapri, ritrovi tutto. Non serve premere nulla.<br>Per un <b>backup</b> o per spostare i dati su un altro dispositivo usa <b>"Esporta tutti"</b> qui in alto.</p>
+        <div class="btnrow" style="margin-top:10px">
+          <button onclick="salvaRegistro()">💾 Salva solo questo evento</button>
         </div>
       </div>
     </div>
@@ -423,7 +424,7 @@ function esportaTutti(){
   const blob=new Blob([JSON.stringify({tipo:'raduno_backup',versione:1,salvato:new Date().toISOString(),eventi:ev},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='backup_eventi_'+new Date().toISOString().slice(0,10)+'.json';a.click();
-  toast('Backup di tutti gli eventi scaricato');
+  toast('Backup salvato nei Download: '+a.download);
 }
 function importaTutti(ev){
   const f=ev.target.files[0];if(!f)return;
@@ -800,8 +801,9 @@ function salvaRegistro(){
   const data={versione:4,salvato:new Date().toISOString(),evento:EVENTO_NOME,prezzi:{pranzo:P_PRANZO,kit:P_KIT,ts:P_TS},lista:document.getElementById('input').value,pagato,override,dropTshirt,resolveSosp,freebie,staff};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='registro_raduno_'+new Date().toISOString().slice(0,10)+'.json';a.click();
-  toast('Registro salvato');
+  const nomePulito=(EVENTO_NOME||'evento').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'').toLowerCase();
+  a.download=nomePulito+'_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('Salvato nei Download: '+a.download);
 }
 function caricaRegistro(ev){
   const f=ev.target.files[0];if(!f)return;
