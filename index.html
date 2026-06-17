@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conta Raduno</title>
+<style>
+  :root{
+    --asphalt:#1c1f26; --asphalt-soft:#262a33; --line:#3a3f4b;
+    --chrome:#c9ccd4; --fog:#8b90a0; --paper:#f3f1ec;
+    --amber:#e8a13a; --amber-soft:#f6c878;
+    --green:#5ec27a; --red:#e25c54; --road:#d6552e; --sky:#6fa8d8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--asphalt);color:var(--paper);
+    font-family:"DejaVu Sans","Segoe UI",system-ui,sans-serif;
+    line-height:1.5;padding:0 0 80px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+  header{border-bottom:2px solid var(--amber);padding:34px 0 26px;margin-bottom:30px}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:10px}
+  h1{font-size:clamp(28px,5.5vw,48px);font-weight:800;letter-spacing:-.02em;line-height:1}
+  h1 .km{color:var(--fog);font-weight:400;font-size:.5em}
+  .sub{color:var(--fog);margin-top:12px;max-width:66ch;font-size:15px}
+  .grid{display:grid;grid-template-columns:1fr;gap:26px}
+  @media(min-width:900px){.grid{grid-template-columns:minmax(0,380px) 1fr}}
+  .panel{background:var(--asphalt-soft);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .panel h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--chrome);margin-bottom:14px;font-weight:700;display:flex;align-items:center;gap:10px}
+  .panel h2 .n{background:var(--amber);color:var(--asphalt);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+  textarea{width:100%;min-height:300px;resize:vertical;background:var(--asphalt);color:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:"DejaVu Sans Mono",ui-monospace,monospace;font-size:13px;line-height:1.5}
+  textarea:focus{outline:none;border-color:var(--amber)}
+  .hint{font-size:12.5px;color:var(--fog);margin-top:12px;background:var(--asphalt);border-left:3px solid var(--amber);padding:11px 13px;border-radius:0 8px 8px 0}
+  .hint code{color:var(--amber-soft);font-size:12px}.hint b{color:var(--paper)}
+  .btnrow{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+  button{font-family:inherit;font-weight:700;cursor:pointer;border-radius:9px;padding:10px 16px;font-size:13.5px;border:1px solid var(--line);background:var(--asphalt);color:var(--paper);transition:transform .05s,border-color .15s}
+  button:hover{border-color:var(--amber)}button:active{transform:translateY(1px)}
+  button.primary{background:var(--amber);color:var(--asphalt);border-color:var(--amber)}
+  button.ghost{color:var(--fog)}
+  .save-row{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+  .save-row .lab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog);margin-bottom:9px;font-weight:700}
+  .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cfg-grid .cfg-full{grid-column:1 / -1}
+  .cfg-grid label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--fog);font-weight:600}
+  .cfg-grid input{background:var(--asphalt);color:var(--paper);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:14px}
+  .cfg-grid input:focus{outline:none;border-color:var(--amber)}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+  @media(min-width:620px){.stats{grid-template-columns:repeat(4,1fr)}}
+  .stat{background:var(--asphalt);border:1px solid var(--line);border-radius:11px;padding:15px}
+  .stat .lab{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);margin-bottom:7px}
+  .stat .val{font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .stat .val.money{color:var(--amber-soft)}.stat .val.ok{color:var(--green)}.stat .val.due{color:var(--road)}.stat .val.sosp{color:var(--sky)}
+  .box{border-radius:11px;padding:14px 16px;margin-bottom:20px}
+  .box h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px}
+  .box ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+  .box li{font-family:"DejaVu Sans Mono",monospace;font-size:12.5px}.box li span{color:var(--fog)}
+  .errbox{background:rgba(226,92,84,.08);border:1px solid var(--red)}.errbox h3{color:var(--red)}.errbox li{color:var(--amber-soft)}
+  .sospbox{background:rgba(111,168,216,.08);border:1px solid var(--sky)}.sospbox h3{color:var(--sky)}.sospbox li{color:var(--paper)}
+  .sosp-list{display:flex;flex-direction:column;gap:10px}
+  .sosp-item{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid rgba(111,168,216,.18)}
+  .sosp-item:last-child{border-bottom:none}
+  .sosp-name{font-weight:700;min-width:150px;flex:1}
+  .sosp-item select{background:var(--asphalt);color:var(--paper);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-family:inherit;font-size:12px;font-weight:700}
+  .sosp-item select:focus{outline:none;border-color:var(--sky)}
+  .editbtns button.conf{background:var(--sky);color:var(--asphalt);border-color:var(--sky)}
+  .editbtns button.conf:disabled{background:transparent;color:var(--fog);border-color:var(--line);cursor:not-allowed;opacity:.5}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);font-weight:700}
+  tbody tr:hover{background:var(--asphalt)}
+  td.num{color:var(--fog);font-variant-numeric:tabular-nums;width:46px}
+  .idnum{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:26px;padding:0 7px;border-radius:7px;background:var(--asphalt);border:1px solid var(--line);color:var(--paper);font-weight:800;font-variant-numeric:tabular-nums;font-size:14px}
+  .idnum.iddup{border-color:var(--red);color:var(--red);background:rgba(226,92,84,.12)}
+  .idnum.idmiss{border-color:var(--red);color:var(--red);background:rgba(226,92,84,.12)}
+  .dupbox{background:rgba(226,92,84,.1);border:1px solid var(--red)}.dupbox h3{color:var(--red)}.dupbox li{color:var(--paper)}.dupbox li b{color:var(--red)}
+  td.eur{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid var(--line)}
+  .tag.pranzo{color:var(--amber-soft);border-color:var(--amber)}.tag.kit{color:var(--chrome)}
+  .tag.tshirt{color:var(--green);border-color:var(--green);margin-left:5px}.tag.bimbo{color:var(--sky);border-color:var(--sky)}
+  .tag.staff{color:var(--asphalt);background:var(--amber);border-color:var(--amber);margin-left:5px}
+  .tag.freebie{color:var(--asphalt);background:var(--sky);border-color:var(--sky);margin-left:5px}
+  .cell-name{min-width:150px}
+  .pname{font-weight:600}
+  .pname.n-staff{color:var(--amber);font-weight:800}
+  .pname.n-free{color:var(--sky);font-weight:700}
+  .flagbtns{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}
+  .flag{padding:2px 6px;font-size:13px;line-height:1;border-radius:6px;background:transparent;border:1px solid var(--line);opacity:.4;filter:grayscale(1);cursor:pointer}
+  .flag:hover{opacity:.85;border-color:var(--fog)}
+  .flag.on{opacity:1;filter:none}
+  .flag.gift.on{border-color:var(--sky);background:rgba(111,168,216,.18)}
+  .flag.star.on{border-color:var(--amber);background:rgba(232,161,58,.18);color:var(--amber)}
+  .flagbtns{display:none}              /* icone Free/Staff nascoste di default */
+  body.admin .flagbtns{display:inline-flex}   /* visibili solo in modalità admin */
+  .nsym{margin-right:5px;font-size:12px}
+  .pname.n-staff .nsym{color:var(--amber)}.pname.n-free .nsym{color:var(--sky)}
+  .admin-toggle{position:absolute;top:34px;right:0;padding:7px 13px;font-size:12px;border-radius:8px;background:var(--asphalt);border:1px solid var(--line);color:var(--fog)}
+  .admin-toggle.on{border-color:var(--amber);color:var(--amber)}
+  .pin-box{display:none;position:absolute;top:70px;right:0;gap:8px;align-items:center;background:var(--asphalt-soft);border:1px solid var(--line);border-radius:10px;padding:10px;z-index:20}
+  .pin-input{width:90px;background:var(--asphalt);color:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:15px;font-family:inherit;letter-spacing:.2em}
+  .pin-input:focus{outline:none;border-color:var(--amber)}
+  @media(max-width:640px){
+    .admin-toggle{position:static;margin-top:14px;width:100%}
+    .pin-box{position:static;margin-top:10px;width:100%}
+    .pin-input{flex:1;width:auto}
+  }
+  .edited{display:inline-block;margin-left:6px;font-size:10px;color:var(--amber);font-weight:700;letter-spacing:.05em}
+  .paidcell{text-align:center}.paidcell input{width:18px;height:18px;accent-color:var(--green);cursor:pointer}
+  tr.paid td.eur{color:var(--green)}tr.unpaid td.eur{color:var(--road)}tr.free td.eur{color:var(--fog)}
+  .editbtns{display:flex;gap:4px;flex-wrap:wrap}
+  .editbtns button{padding:4px 9px;font-size:11px;font-weight:700;border-radius:7px}
+  .editbtns button.act{background:var(--amber);color:var(--asphalt);border-color:var(--amber)}
+  .sizes{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .size{background:var(--asphalt);border:1px solid var(--line);border-radius:10px;padding:11px 16px;min-width:72px;text-align:center}
+  .size.baby{border-color:var(--sky)}
+  .size .s{font-size:12px;color:var(--fog);letter-spacing:.06em;font-weight:700}.size.baby .s{color:var(--sky)}
+  .size .c{font-size:24px;font-weight:800;color:var(--paper)}
+  .empty{color:var(--fog);text-align:center;padding:50px 20px;font-size:15px}
+  .empty b{color:var(--paper);display:block;margin-bottom:6px;font-size:17px}
+  .blocklab{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--chrome);font-weight:700;margin:24px 0 10px}
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--fog);font-size:12.5px}
+  footer b{color:var(--amber-soft)}footer code{color:var(--paper)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:var(--asphalt);font-weight:700;padding:12px 22px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1}
+
+  /* ===== MOBILE ===== */
+  @media(max-width:640px){
+    .wrap{padding:0 12px}
+    header{padding:22px 0 18px;margin-bottom:20px}
+    .panel{padding:16px;border-radius:12px}
+    textarea{min-height:200px;font-size:14px}
+    button{padding:11px 15px;font-size:14px}        /* tap target più grandi */
+    .flag{padding:6px 10px;font-size:16px}           /* icone toccabili col dito */
+    .editbtns button{padding:7px 12px;font-size:13px}
+    .stat .val{font-size:22px}
+    .stats{gap:9px}
+
+    /* la tabella diventa una lista di schede impilate */
+    table,thead,tbody,th,td,tr{display:block}
+    thead{position:absolute;left:-9999px}            /* nasconde intestazioni */
+    tbody tr{
+      background:var(--asphalt);border:1px solid var(--line);
+      border-radius:12px;padding:12px;margin-bottom:12px;
+    }
+    tbody tr:hover{background:var(--asphalt)}
+    td{border:none;padding:5px 0;display:flex;align-items:center;gap:10px}
+    /* etichetta a sinistra di ogni cella, presa da data-lab */
+    td[data-lab]::before{
+      content:attr(data-lab);
+      font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--fog);font-weight:700;min-width:64px;flex-shrink:0;
+    }
+    td.num{display:flex;order:-1}              /* il N° ID resta visibile, in cima alla card */
+    td.num[data-lab]::before{content:attr(data-lab);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);font-weight:700;min-width:64px;flex-shrink:0}
+    td.cell-name{font-size:17px;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:6px}
+    td.eur{justify-content:flex-start;font-size:17px}
+    td.eur::before{min-width:64px}
+    .editbtns,.flagbtns{flex-wrap:wrap}
+    .cell-name{min-width:0;flex:1}
+
+    /* sospesi: controlli a tutta larghezza */
+    .sosp-item{flex-direction:column;align-items:stretch;gap:8px}
+    .sosp-name{min-width:0}
+    .sosp-item .editbtns{justify-content:space-between}
+    .sosp-item select{flex:1}
+
+    .sizes{gap:7px}.size{min-width:60px;padding:9px 12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Riepilogo privato organizzatori</div>
+    <h1 id="pageTitle">Conta Raduno <span class="km" id="pageSub">incolla la lista, gestisci l'evento</span></h1>
+    <p class="sub">Incolla la lista del gruppo WhatsApp. Puoi correggere ogni partecipante, segnare i pagamenti, e salvare il registro per ritrovarlo domani. Reincollando la lista cresciuta, pagamenti e correzioni restano. Tutto sul tuo dispositivo, niente online.</p>
+    <button id="adminBtn" class="admin-toggle" onclick="toggleAdmin()">🔒 Modalità admin</button>
+    <div id="pinBox" class="pin-box">
+      <input id="pinInput" class="pin-input" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off"
+        onkeydown="if(event.key==='Enter')confermaPin()">
+      <button class="primary" onclick="confermaPin()">Sblocca</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2><span class="n">1</span>Lista WhatsApp</h2>
+      <textarea id="input" placeholder="Incolla qui la lista dal gruppo WhatsApp, es:
+1-Mario Rossi    L
+2-Anna Bianchi    M
+..."></textarea>
+      <div class="hint">
+        <code>nome + taglia</code> → pranzo + t-shirt · <code>solo nome</code> → sospeso · <code>L+M</code> → 2 magliette · <code>2a</code>/<code>6m</code> → bimbo gratis · <code>2XL</code>=<code>XXL</code>. <b>Solo le righe che iniziano con un numero contano</b>: intestazioni e raccomandazioni del messaggio vengono ignorate. Per i sospesi usa i pulsanti nel riquadro azzurro per completarli e spostarli in lista.
+      </div>
+      <div class="btnrow">
+        <button class="primary" onclick="calcola()">Calcola</button>
+        <button class="ghost" onclick="pulisci()">Svuota</button>
+      </div>
+      <div class="save-row">
+        <div class="lab">Impostazioni evento</div>
+        <div class="cfg-grid">
+          <label class="cfg-full">Nome evento<input id="cfgNome" type="text" placeholder="(vuoto = usa intestazione lista)"></label>
+          <label>Pranzo €<input id="cfgPranzo" type="number" min="0" step="1" value="38"></label>
+          <label>Kit €<input id="cfgKit" type="number" min="0" step="1" value="18"></label>
+          <label>T-shirt €<input id="cfgTs" type="number" min="0" step="1" value="12"></label>
+        </div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="primary" onclick="applicaImpostazioni()">Applica</button>
+        </div>
+      </div>
+      <div class="save-row">
+        <div class="lab">Registro (pagamenti + correzioni)</div>
+        <div class="btnrow" style="margin-top:0">
+          <button onclick="salvaRegistro()">💾 Salva registro</button>
+          <button onclick="document.getElementById('loadfile').click()">📂 Carica registro</button>
+          <input type="file" id="loadfile" accept=".json" style="display:none" onchange="caricaRegistro(event)">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="n">2</span>Riepilogo</h2>
+      <div id="output"><div class="empty"><b>Nessun dato ancora.</b>Incolla la lista e premi Calcola.</div></div>
+    </div>
+  </div>
+
+  <footer>
+    Prezzi: pranzo <b>38€</b> · kit <b>18€</b> · t-shirt <b>+12€</b> · bimbi <b>gratis</b>. Stato pagamenti e correzioni sono legati al <b>nome</b>, quindi sopravvivono al re-incolla. <b>Salva il registro</b> prima di chiudere: la pagina da sola non ricorda nulla tra una sessione e l'altra.
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Prezzi (modificabili dal pannello Impostazioni evento)
+let P_PRANZO=38,P_KIT=18,P_TS=12;
+// Nome evento (usato in PDF e viste). Vuoto = usa l'intestazione della lista WhatsApp.
+let EVENTO_NOME="";
+function applicaImpostazioni(){
+  const n=document.getElementById('cfgNome');
+  const kp=document.getElementById('cfgPranzo'), kk=document.getElementById('cfgKit'), kt=document.getElementById('cfgTs');
+  if(n)EVENTO_NOME=n.value.trim();
+  if(kp&&kp.value!=='')P_PRANZO=Math.max(0,parseFloat(kp.value)||0);
+  if(kk&&kk.value!=='')P_KIT=Math.max(0,parseFloat(kk.value)||0);
+  if(kt&&kt.value!=='')P_TS=Math.max(0,parseFloat(kt.value)||0);
+  aggiornaTitolo();
+  calcola();
+  toast('Impostazioni applicate');
+}
+function aggiornaTitolo(){
+  const t=document.getElementById('pageTitle');
+  const sub=document.getElementById('pageSub');
+  if(EVENTO_NOME){
+    t.textContent=EVENTO_NOME;
+    document.title=EVENTO_NOME;
+  }else{
+    t.innerHTML='Conta Raduno <span class="km" id="pageSub">incolla la lista, gestisci l\'evento</span>';
+    document.title='Conta Raduno';
+  }
+}
+function syncImpostazioniUI(){
+  const n=document.getElementById('cfgNome');if(n)n.value=EVENTO_NOME;
+  const kp=document.getElementById('cfgPranzo');if(kp)kp.value=P_PRANZO;
+  const kk=document.getElementById('cfgKit');if(kk)kk.value=P_KIT;
+  const kt=document.getElementById('cfgTs');if(kt)kt.value=P_TS;
+  aggiornaTitolo();
+}
+const TAGLIE=["XS","S","M","L","XL","XXL","3XL"];
+
+// STATO PERSISTENTE legato al NOME (sopravvive al re-incolla)
+// pagato[nomeKey] = true
+// override[nomeKey] = {pranzo:bool}  -> correzione manuale pranzo/kit
+// dropTshirt[nomeKey] = true -> l'organizzatore ha tolto la maglietta
+const pagato={}, override={}, dropTshirt={};
+// resolveSosp[nomeKey] = {pranzo:bool, taglia:string|null} -> sospeso COMPLETATO (spostato in lista)
+const resolveSosp={};
+// bozza temporanea mentre si scelgono le opzioni di un sospeso, prima di "Sposta"
+const sospDraft={};
+// freebie[nomeKey]=true -> FREE: importo azzerato, detratto dal montante. staff[nomeKey]=true -> etichetta staff
+const freebie={}, staff={};
+
+// === Modalità admin ===
+// PIN per mostrare le icone Free/Staff. Cambialo con quello che vuoi.
+// NB: non è sicurezza vera (è leggibile nel codice), serve solo a tenere lontani i curiosi.
+const ADMIN_PIN="1234";
+let adminMode=false;
+function toggleAdmin(){
+  if(adminMode){
+    // disattiva subito
+    adminMode=false;
+    applyAdmin();
+    return;
+  }
+  // mostra il pannello PIN inline (prompt() non funziona su molti browser mobile)
+  const box=document.getElementById('pinBox');
+  box.style.display = (box.style.display==='flex')?'none':'flex';
+  if(box.style.display==='flex'){const f=document.getElementById('pinInput');f.value='';f.focus();}
+}
+function confermaPin(){
+  const v=document.getElementById('pinInput').value;
+  if(v!==ADMIN_PIN){toast("PIN errato");return;}
+  adminMode=true;
+  document.getElementById('pinBox').style.display='none';
+  applyAdmin();
+}
+function applyAdmin(){
+  document.body.classList.toggle('admin',adminMode);
+  const b=document.getElementById('adminBtn');
+  b.textContent=adminMode?"🔓 Admin attivo":"🔒 Modalità admin";
+  b.classList.toggle('on',adminMode);
+}
+
+function nameKey(nome){return nome.toLowerCase().replace(/\s+/g,' ').trim();}
+
+function pulisci(){
+  document.getElementById('input').value='';
+  for(const k in pagato)delete pagato[k];
+  for(const k in override)delete override[k];
+  for(const k in dropTshirt)delete dropTshirt[k];
+  for(const k in resolveSosp)delete resolveSosp[k];
+  for(const k in freebie)delete freebie[k];
+  for(const k in staff)delete staff[k];
+  render(null);
+}
+
+function isBaby(t){return /^\d+\s*(m|a|mes|ann)/i.test(t.trim());}
+function normBaby(t){t=t.trim().toLowerCase();const m=t.match(/^(\d+)\s*(m|a|mes|ann)/);if(!m)return t;return m[2].startsWith('m')?m[1]+'m':m[1]+'a';}
+function normTaglia(t){let s=t.trim().toUpperCase().replace(/\s+/g,'');s=s.replace(/^2XL$/,'XXL').replace(/^XXXL$/,'3XL').replace(/^2X$/,'XXL').replace(/^3X$/,'3XL');return TAGLIE.includes(s)?s:null;}
+
+function parseRiga(raw){
+  let line=raw.replace(/\s+$/,'');
+  if(line.trim()==='')return null;
+  // SOLO righe che iniziano con un numero seguito da - . ) sono partecipanti.
+  // Tutto il resto (intestazioni, raccomandazioni, righe di asterischi) viene scartato.
+  const mNum=line.match(/^\s*(\d+)\s*[-.).]\s*(.*)$/);
+  if(!mNum)return null; // non è una riga partecipante: ignora del tutto
+  const num=parseInt(mNum[1],10);
+  let body=mNum[2].trim();
+  if(body==='')return null; // tipo "77-" vuoto
+  let nome=body, tagliaRaw='';
+  const mFinal=body.match(/^(.*?)[\s\t]+([A-Za-z0-9+,\/\.]+)\s*$/);
+  if(mFinal){
+    const cand=mFinal[2].replace(/\.$/,'');
+    if(/kit/i.test(cand)||/^[A-Za-z0-9]+([+,\/][A-Za-z0-9]+)*$/.test(cand)){
+      const pezzi=cand.split(/[+,\/]/);
+      if(pezzi.some(p=>normTaglia(p)||isBaby(p)||/^kit$/i.test(p))){nome=mFinal[1].trim();tagliaRaw=cand;}
+    }
+  }
+  nome=nome.replace(/\.$/,'').trim();
+  if(nome==='')return null;
+  if(tagliaRaw==='')return {tipo:'sospeso',nome,num,raw:line};
+  if(/^kit$/i.test(tagliaRaw))return {tipo:'ok',nome,pranzo:false,taglie:[],baby:[],num,raw:line};
+  const pezzi=tagliaRaw.split(/[+,\/]/).map(s=>s.trim()).filter(Boolean);
+  const taglie=[],baby=[];
+  for(const p of pezzi){
+    const t=normTaglia(p);
+    if(t){taglie.push(t);continue;}
+    if(isBaby(p)){baby.push(normBaby(p));continue;}
+    return {tipo:'errore',nome,num,raw:line,reason:'taglia non riconosciuta: "'+p+'"'};
+  }
+  return {tipo:'ok',nome,pranzo:true,taglie,baby,num,raw:line};
+}
+
+function calcola(){
+  const righe=document.getElementById('input').value.split('\n');
+  // identifico il blocco partecipanti: tra la prima e l'ultima riga che inizia con un numero
+  const isNumLine=l=>/^\s*\d+\s*[-.).]/.test(l);
+  let primo=-1,ultimo=-1;
+  righe.forEach((l,idx)=>{if(isNumLine(l)){if(primo<0)primo=idx;ultimo=idx;}});
+  let intest=[],footer=[];
+  if(primo>=0){
+    intest=righe.slice(0,primo).filter(l=>l.trim()!=='');
+    footer=righe.slice(ultimo+1).filter(l=>l.trim()!=='');
+  }
+
+  const parsed=[];
+  righe.forEach((r,idx)=>{
+    const res=parseRiga(r);
+    if(res!==null){parsed.push(res);return;}
+    // riga scartata: se è DENTRO il blocco partecipanti, ha del testo e NON inizia con numero
+    // → è un partecipante senza numero → errore "numero mancante"
+    if(primo>=0 && idx>primo && idx<ultimo && r.trim()!=='' && !isNumLine(r)){
+      parsed.push({tipo:'errore',nome:r.trim(),num:null,raw:r.trim(),reason:'numero mancante'});
+    }
+  });
+  // assegno una chiave per-occorrenza nell'ORDINE di lettura, valida sia per ok che per sospesi
+  const seen={};
+  parsed.forEach(res=>{ if(res.tipo!=='errore') res.key=occKey(res.nome,seen); });
+
+  const ok=[],sosp=[],errs=[];
+  parsed.forEach(res=>{
+    if(res.tipo==='errore'){errs.push(res);return;}
+    if(res.tipo==='sospeso'){
+      // se l'organizzatore l'ha completato dai pulsanti, diventa un partecipante
+      const r=resolveSosp[res.key];
+      if(r&&typeof r.pranzo==='boolean'){
+        const taglie=[],baby=[];
+        if(r.taglia){ if(isBaby(r.taglia))baby.push(normBaby(r.taglia)); else { const t=normTaglia(r.taglia); if(t)taglie.push(t);} }
+        ok.push({tipo:'ok',nome:res.nome,pranzo:r.pranzo,taglie,baby,num:res.num,raw:res.raw,key:res.key,daSosp:true});
+      }else{
+        sosp.push(res);
+      }
+      return;
+    }
+    ok.push(res);
+  });
+
+  // rilevo numeri DUPLICATI tra tutti i partecipanti (ok + sospesi)
+  const numMap={};
+  [...ok,...sosp].forEach(p=>{ if(p.num!=null){ (numMap[p.num]=numMap[p.num]||[]).push(p.nome); } });
+  const duplicati=Object.entries(numMap).filter(([n,arr])=>arr.length>1).map(([n,arr])=>({num:n,nomi:arr}));
+
+  render({ok,sosp,errs,intest,footer,duplicati});
+}
+
+// indice di occorrenza per distinguere omonimi (Gaetano Mancini #1 e #2)
+function occKey(nome, seen){
+  const base=nameKey(nome);
+  const n=(seen[base]||0)+1; seen[base]=n;
+  return base+'#'+n;
+}
+
+function render(data){
+  const out=document.getElementById('output');
+  if(!data){out.innerHTML='<div class="empty"><b>Nessun dato ancora.</b>Incolla la lista e premi Calcola.</div>';return;}
+  const {ok,sosp,errs,intest,footer,duplicati}=data;
+  if(ok.length===0&&sosp.length===0&&errs.length===0){
+    out.innerHTML='<div class="empty"><b>Nessuna riga riconosciuta.</b>Controlla il formato.</div>';return;}
+
+  let totale=0,incassato=0,nPranzo=0,nKit=0,nBimbi=0,nTs=0,nTsBaby=0;
+  const conteggio={};TAGLIE.forEach(t=>conteggio[t]=0);const babyCount={};
+  const computed=[];
+
+  ok.forEach((p,i)=>{
+    const key=p.key;
+    const isBimboRow=p.baby.length>0&&p.taglie.length===0;
+    // applica correzioni
+    let pranzo=p.pranzo;
+    if(override[key]&&typeof override[key].pranzo==='boolean')pranzo=override[key].pranzo;
+    let taglie=p.taglie.slice();
+    let baby=p.baby.slice();
+    const tshirtTolta=!!dropTshirt[key];
+    if(tshirtTolta){taglie=[];baby=isBimboRow?[]:baby;} // se bimbo, togliere maglia = niente
+    computed.push({p,key,num:p.num,isBimboRow,pranzo,taglie,baby,tshirtTolta,edited:!!override[key]||tshirtTolta});
+  });
+
+  const rows=computed.map((c,i)=>{
+    const {p,key,isBimboRow,pranzo,taglie,baby,edited}=c;
+    const isFree=!!freebie[key];
+    const isStaff=!!staff[key];
+    let q=0;
+    if(isBimboRow){
+      nBimbi++;
+      baby.forEach(b=>{babyCount[b]=(babyCount[b]||0)+1;nTsBaby++;});
+      // bimbo gratis sempre
+    }else{
+      if(pranzo){q+=P_PRANZO;nPranzo++;}else{q+=P_KIT;nKit++;}
+      taglie.forEach(t=>{conteggio[t]++;nTs++;q+=P_TS;});
+      baby.forEach(b=>{babyCount[b]=(babyCount[b]||0)+1;nTsBaby++;q+=P_TS;});
+    }
+    // FREE: importo azzerato e tolto dal montante (le magliette restano da produrre)
+    const dovuto = (isBimboRow||isFree) ? 0 : q;
+    totale+=dovuto;
+    const paid=!!pagato[key];
+    const conteggiaPagato = !isBimboRow && !isFree; // free e bimbi non incassano
+    if(paid&&conteggiaPagato)incassato+=dovuto;
+
+    let scelta='';
+    if(isBimboRow){
+      scelta='<span class="tag bimbo">Bimbo</span>'+(baby.length?'<span class="tag tshirt">t-shirt '+baby.join(', ')+'</span>':'');
+    }else{
+      scelta+=pranzo?'<span class="tag pranzo">KIT+PRANZO</span>':'<span class="tag kit">KIT</span>';
+      const allT=[...taglie,...baby];
+      if(allT.length)scelta+='<span class="tag tshirt">t-shirt '+allT.join(', ')+'</span>';
+    }
+    if(edited)scelta+='<span class="edited">✎ modificato</span>';
+
+    // icone admin free/staff (mostrate solo in modalità admin)
+    const kEsc=escAttr(key);
+    let flags='<div class="flagbtns">'+
+      '<button class="flag gift'+(isFree?' on':'')+'" title="Free (azzera importo)" onclick="toggleFree(\''+kEsc+'\')">🎁</button>'+
+      '<button class="flag star'+(isStaff?' on':'')+'" title="Staff" onclick="toggleStaff(\''+kEsc+'\')">★</button>'+
+      '</div>';
+
+    // pulsanti modifica (non per i bimbi)
+    let edit='';
+    if(!isBimboRow){
+      const haTaglia=(p.taglie.length>0||p.baby.length>0);
+      edit='<div class="editbtns">'+
+        '<button class="'+(pranzo?'act':'')+'" onclick="setPranzo(\''+kEsc+'\',true)">Pranzo</button>'+
+        '<button class="'+(!pranzo?'act':'')+'" onclick="setPranzo(\''+kEsc+'\',false)">Kit</button>'+
+        (haTaglia?'<button class="'+(c.tshirtTolta?'act':'')+'" onclick="toggleTshirt(\''+kEsc+'\')">'+(c.tshirtTolta?'+ maglia':'– maglia')+'</button>':'')+
+        '</div>';
+    }
+
+    // colore nome: staff (giallo) predomina su free (azzurro)
+    const nameClass = isStaff?'n-staff':(isFree?'n-free':'');
+    // simboli leggibili anche in B/N: ★ staff, ✦ free
+    let symbol='';
+    if(isStaff)symbol+='<span class="nsym" title="Staff">★</span>';
+    if(isFree)symbol+='<span class="nsym" title="Free">✦</span>';
+    const rowClass=isBimboRow?'free':(isFree?'free':(paid?'paid':'unpaid'));
+    const chk=(isBimboRow||isFree)?'<span style="color:var(--fog)">—</span>':
+      '<input type="checkbox" '+(paid?'checked':'')+' onchange="togglePaid(\''+kEsc+'\')">';
+    // NUMERO UFFICIALE = quello scritto nella lista (ID per moto/set/t-shirt), mai posizionale
+    const numDup = p.num!=null && data.duplicati && data.duplicati.some(d=>String(d.num)===String(p.num));
+    const numCell = (p.num!=null)
+      ? '<span class="idnum'+(numDup?' iddup':'')+'">'+p.num+'</span>'
+      : '<span class="idnum idmiss" title="numero mancante">?</span>';
+    return '<tr class="'+rowClass+'"><td class="num" data-lab="N°">'+numCell+'</td>'+
+      '<td class="cell-name"><span class="pname '+nameClass+'">'+symbol+escHtml(p.nome)+'</span>'+flags+'</td>'+
+      '<td data-lab="Scelta">'+scelta+'</td><td data-lab="Correggi">'+edit+'</td>'+
+      '<td class="paidcell" data-lab="Pagato">'+chk+'</td>'+
+      '<td class="eur" data-lab="Dovuto">'+((isBimboRow||isFree)?'0':q)+'&nbsp;€</td></tr>';
+  }).join('');
+
+  const mancante=totale-incassato;
+  let nFree=0,nStaff=0,valFree=0;
+  computed.forEach(c=>{
+    if(freebie[c.key]){nFree++;
+      if(!c.isBimboRow){const qq=(c.pranzo?P_PRANZO:P_KIT)+(c.taglie.length+c.baby.length)*P_TS;valFree+=qq;}
+    }
+    if(staff[c.key])nStaff++;
+  });
+  window._calc={computed,sosp,totale,incassato,mancante,conteggio,babyCount,nPranzo,nKit,nBimbi,nTs,nTsBaby,nFree,nStaff,valFree,intest:intest||[],footer:footer||[]};
+
+  let errHTML=errs.length?'<div class="box errbox"><h3>⚠ '+errs.length+' riga/e da correggere</h3><ul>'+
+    errs.map(e=>'<li>'+escHtml(e.raw)+' <span>→ '+escHtml(e.reason)+'</span></li>').join('')+'</ul></div>':'';
+  let dupHTML=(duplicati&&duplicati.length)?'<div class="box dupbox"><h3>⛔ '+duplicati.length+' numero/i DUPLICATO/I · stesso ID a più persone</h3><ul>'+
+    duplicati.map(d=>'<li><b>N° '+escHtml(d.num)+'</b> → '+d.nomi.map(escHtml).join(', ')+'</li>').join('')+'</ul></div>':'';
+  let sospHTML='';
+  if(sosp.length){
+    sospHTML='<div class="box sospbox"><h3>⏳ '+sosp.length+' in sospeso · scegli le opzioni per spostarli in lista</h3><div class="sosp-list">'+
+      sosp.map(s=>{
+        const k=escAttr(s.key);
+        const sel=sospDraft[s.key]||{};
+        const tag=(typeof sel.pranzo==='boolean');
+        const opts=['<option value="">— t-shirt —</option>','<option value="NOTS">nessuna t-shirt</option>']
+          .concat(TAGLIE.map(t=>'<option value="'+t+'"'+(sel.taglia===t?' selected':'')+'>'+t+'</option>'))
+          .concat(['<option value="2a"'+(sel.taglia==='2a'?' selected':'')+'>bimbo 2a</option>','<option value="6m"'+(sel.taglia==='6m'?' selected':'')+'>bimbo 6m</option>'])
+          .join('');
+        return '<div class="sosp-item">'+
+          '<span class="sosp-name">'+escHtml(s.nome)+'</span>'+
+          '<div class="editbtns">'+
+            '<button class="'+(sel.pranzo===true?'act':'')+'" onclick="sospSet(\''+k+'\',\'pranzo\',true)">Pranzo</button>'+
+            '<button class="'+(sel.pranzo===false?'act':'')+'" onclick="sospSet(\''+k+'\',\'pranzo\',false)">Kit</button>'+
+            '<select onchange="sospTaglia(\''+k+'\',this.value)">'+opts+'</select>'+
+            '<button class="conf" '+(tag?'':'disabled')+' onclick="sospConferma(\''+k+'\')">✓ Sposta</button>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
+      '</div></div>';
+  }
+
+  const sizesHTML=TAGLIE.map(t=>'<div class="size" style="'+(conteggio[t]===0?'opacity:.35':'')+'"><div class="s">'+t+'</div><div class="c">'+conteggio[t]+'</div></div>').join('');
+  const babyHTML=Object.keys(babyCount).length?Object.entries(babyCount).map(([b,c])=>'<div class="size baby"><div class="s">'+b+'</div><div class="c">'+c+'</div></div>').join(''):'';
+
+  out.innerHTML=
+    '<div class="btnrow" style="margin:0 0 20px"><button class="primary" onclick="generaListaWZP()">📋 Genera lista x WhatsApp</button><button onclick="stampaPDF()">🖨 Lista PDF (raduno)</button><button onclick="copiaListaSemplice()">📤 Lista da condividere</button><button onclick="exportCSV()">⤓ Scarica CSV</button><button onclick="copiaRiep()">⧉ Copia riepilogo</button></div>'+
+    '<div class="stats">'+
+      '<div class="stat"><div class="lab">Confermati</div><div class="val">'+(computed.length-nBimbi)+'</div></div>'+
+      '<div class="stat"><div class="lab">Totale atteso</div><div class="val money">'+totale+'&nbsp;€</div></div>'+
+      '<div class="stat"><div class="lab">Incassato</div><div class="val ok">'+incassato+'&nbsp;€</div></div>'+
+      '<div class="stat"><div class="lab">Da incassare</div><div class="val due">'+mancante+'&nbsp;€</div></div>'+
+    '</div>'+
+    '<div class="stats" style="grid-template-columns:repeat(3,1fr)">'+
+      '<div class="stat"><div class="lab">Pranzo</div><div class="val" style="font-size:21px">'+nPranzo+'</div></div>'+
+      '<div class="stat"><div class="lab">Solo kit</div><div class="val" style="font-size:21px">'+nKit+'</div></div>'+
+      '<div class="stat"><div class="lab">In sospeso</div><div class="val sosp" style="font-size:21px">'+sosp.length+'</div></div>'+
+    '</div>'+
+    ((nFree||nStaff)?'<div class="stats" style="grid-template-columns:repeat(2,1fr)">'+
+      '<div class="stat"><div class="lab">Free · valore detratto</div><div class="val" style="font-size:21px;color:var(--sky)">'+nFree+' · '+valFree+'&nbsp;€</div></div>'+
+      '<div class="stat"><div class="lab">Staff</div><div class="val" style="font-size:21px;color:var(--amber)">'+nStaff+'</div></div>'+
+    '</div>':'')+
+    errHTML+dupHTML+sospHTML+
+    '<div class="blocklab">Magliette adulto · '+nTs+' pezzi</div><div class="sizes">'+sizesHTML+'</div>'+
+    (babyHTML?'<div class="blocklab">Magliette bimbo · '+nTsBaby+' pezzi</div><div class="sizes">'+babyHTML+'</div>':'')+
+    '<div class="blocklab">Dettaglio · il N° è l\'ID ufficiale del partecipante (moto, set, t-shirt)</div>'+
+    '<table><thead><tr><th>N°</th><th>Nome</th><th>Scelta</th><th>Correggi</th><th>Pagato</th><th style="text-align:right">Dovuto</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function togglePaid(k){pagato[k]=!pagato[k];calcola();}
+function toggleFree(k){freebie[k]=!freebie[k];if(!freebie[k])delete freebie[k];calcola();}
+function toggleStaff(k){staff[k]=!staff[k];if(!staff[k])delete staff[k];calcola();}
+function setPranzo(k,val){if(!override[k])override[k]={};override[k].pranzo=val;calcola();}
+function toggleTshirt(k){dropTshirt[k]=!dropTshirt[k];calcola();}
+
+// --- gestione sospesi ---
+function sospSet(k,campo,val){if(!sospDraft[k])sospDraft[k]={};sospDraft[k][campo]=val;calcola();}
+function sospTaglia(k,val){
+  if(!sospDraft[k])sospDraft[k]={};
+  sospDraft[k].taglia = (val===''||val==='NOTS') ? (val==='NOTS'?null:undefined) : val;
+  if(val==='NOTS')sospDraft[k].taglia=null;       // ha scelto: nessuna t-shirt
+  else if(val==='')delete sospDraft[k].taglia;    // non ha ancora scelto
+  else sospDraft[k].taglia=val;
+  calcola();
+}
+function sospConferma(k){
+  const d=sospDraft[k];
+  if(!d||typeof d.pranzo!=='boolean'){toast('Scegli prima Pranzo o Kit');return;}
+  resolveSosp[k]={pranzo:d.pranzo, taglia:(d.taglia===undefined?null:d.taglia)};
+  delete sospDraft[k];
+  calcola();
+  toast('Spostato in lista');
+}
+
+function salvaRegistro(){
+  const data={versione:4,salvato:new Date().toISOString(),evento:EVENTO_NOME,prezzi:{pranzo:P_PRANZO,kit:P_KIT,ts:P_TS},lista:document.getElementById('input').value,pagato,override,dropTshirt,resolveSosp,freebie,staff};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='registro_raduno_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('Registro salvato');
+}
+function caricaRegistro(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(d.evento!==undefined)EVENTO_NOME=d.evento;
+      if(d.prezzi){P_PRANZO=d.prezzi.pranzo??P_PRANZO;P_KIT=d.prezzi.kit??P_KIT;P_TS=d.prezzi.ts??P_TS;}
+      syncImpostazioniUI();
+      if(d.lista!==undefined)document.getElementById('input').value=d.lista;
+      for(const k in pagato)delete pagato[k];Object.assign(pagato,d.pagato||{});
+      for(const k in override)delete override[k];Object.assign(override,d.override||{});
+      for(const k in dropTshirt)delete dropTshirt[k];Object.assign(dropTshirt,d.dropTshirt||{});
+      for(const k in resolveSosp)delete resolveSosp[k];Object.assign(resolveSosp,d.resolveSosp||{});
+      for(const k in freebie)delete freebie[k];Object.assign(freebie,d.freebie||d.omaggio||{});
+      for(const k in staff)delete staff[k];Object.assign(staff,d.staff||{});
+      calcola();toast('Registro caricato');
+    }catch(e){toast('File non valido');}
+  };
+  r.readAsText(f);
+  ev.target.value='';
+}
+
+function exportCSV(){
+  const d=window._calc;if(!d)return;
+  const s=';';let r=[['N°','Nome','Scelta','Taglie','Stato','Dovuto','Pagato'].join(s)];
+  // ordino per numero ufficiale; voci senza numero in fondo
+  const ordin=[...d.computed].sort((a,b)=>{const an=a.p&&a.num!=null?a.num:(a.num!=null?a.num:null);const A=a.num,B=b.num;if(A==null&&B==null)return 0;if(A==null)return 1;if(B==null)return -1;return A-B;});
+  ordin.forEach(c=>{
+    const {p,key,isBimboRow,pranzo,taglie,baby,num}=c;
+    const isOm=!!freebie[key], isSt=!!staff[key];
+    let q=0;if(!isBimboRow){q=(pranzo?P_PRANZO:P_KIT)+(taglie.length+baby.length)*P_TS;}
+    const dovuto=(isBimboRow||isOm)?0:q;
+    const tg=[...taglie,...baby].join('+');
+    const stato=[isSt?'STAFF':'',isOm?'FREE':''].filter(Boolean).join('+');
+    const pag=isBimboRow?'GRATIS':(isOm?'FREE':(pagato[key]?'SI':'NO'));
+    r.push([(num!=null?num:'?'),'"'+p.nome.replace(/"/g,'""')+'"',isBimboRow?'Bimbo':(pranzo?'KIT+PRANZO':'KIT'),tg,stato,dovuto,pag].join(s));
+  });
+  r.push('');r.push(['TOTALE ATTESO',d.totale].join(s));r.push(['INCASSATO',d.incassato].join(s));r.push(['DA INCASSARE',d.mancante].join(s));
+  r.push('');r.push('IN SOSPESO');d.sosp.forEach(x=>r.push([(x.num!=null?x.num:'?'),'"'+x.nome.replace(/"/g,'""')+'"'].join(s)));
+  r.push('');r.push('MAGLIETTE ADULTO');TAGLIE.forEach(t=>{if(d.conteggio[t]>0)r.push([t,d.conteggio[t]].join(s))});
+  if(Object.keys(d.babyCount).length){r.push('MAGLIETTE BIMBO');Object.entries(d.babyCount).forEach(([b,c])=>r.push([b,c].join(s)))}
+  r.push(['TOTALE MAGLIETTE',d.nTs+d.nTsBaby].join(s));
+  const blob=new Blob(['\ufeff'+r.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='raduno_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('CSV scaricato');
+}
+function generaListaWZP(){
+  const d=window._calc;if(!d){toast('Calcola prima la lista');return;}
+  // determino la larghezza del numero: 2 cifre fino a 99, 3 cifre se qualcuno supera 99
+  let maxNum=0;
+  d.computed.forEach(c=>{if(c.num!=null&&c.num>maxNum)maxNum=c.num;});
+  d.sosp.forEach(s=>{if(s.num!=null&&s.num>maxNum)maxNum=s.num;});
+  const width=maxNum>99?3:2;
+  const fmtNum=n=>String(n).padStart(width,'0');
+  // raccolgo tutte le voci (confermati + sospesi) con il loro numero originale
+  const voci=[];
+  d.computed.forEach(c=>{
+    const taglie=[...c.taglie,...c.baby];
+    let tag;
+    if(taglie.length===0)tag='KIT';          // partecipa senza maglietta
+    else tag=taglie.join('+');                // L oppure L+M oppure 2a (bimbo)
+    voci.push({num:c.num, riga:(c.num!=null?fmtNum(c.num)+' - ':'')+c.p.nome+'    '+tag});
+  });
+  d.sosp.forEach(s=>{
+    voci.push({num:s.num, riga:(s.num!=null?fmtNum(s.num)+' - ':'')+s.nome+'    (da completare)'});
+  });
+  // ordino per numero originale; voci senza numero in fondo
+  voci.sort((a,b)=>{
+    if(a.num==null&&b.num==null)return 0;
+    if(a.num==null)return 1;
+    if(b.num==null)return -1;
+    return a.num-b.num;
+  });
+
+  // intestazione e footer: usa quelli originali se presenti, altrimenti default
+  const intest=(d.intest&&d.intest.length)?d.intest.join('\n'):'*LISTA PARTECIPANTI*';
+  const footer=(d.footer&&d.footer.length)?d.footer.join('\n'):"FATE COPIA INCOLLA SEMPRE SULL'ULTIMA LISTA AGGIORNATA E AGGIUNGETEVI…….. EVITATE DI FARE PASTICCI🙏🙏*";
+
+  const testo=intest+'\n'+voci.map(v=>v.riga).join('\n')+'\n'+footer;
+  navigator.clipboard.writeText(testo).then(()=>toast('Lista WhatsApp copiata · incollala sul gruppo')).catch(()=>{
+    // fallback: mostra in un prompt per copia manuale
+    window.prompt('Copia la lista qui sotto:',testo);
+  });
+}
+
+function stampaPDF(){
+  const d=window._calc;if(!d){toast('Calcola prima la lista');return;}
+  // larghezza numero coerente con la lista
+  let maxNum=0;
+  d.computed.forEach(c=>{if(c.num!=null&&c.num>maxNum)maxNum=c.num;});
+  d.sosp.forEach(s=>{if(s.num!=null&&s.num>maxNum)maxNum=s.num;});
+  const width=maxNum>99?3:2;
+  const fmtNum=n=>n!=null?String(n).padStart(width,'0'):'—';
+
+  // costruisco le voci (confermati + sospesi), ordinate per numero
+  const voci=[];
+  d.computed.forEach(c=>{
+    const isFree=!!freebie[c.key], isStaff=!!staff[c.key];
+    const taglie=[...c.taglie,...c.baby];
+    let scelta;
+    if(c.isBimboRow)scelta='Bimbo';
+    else scelta=(c.pranzo?'Pranzo':'Kit');
+    const tag=taglie.length?taglie.join('+'):'—';
+    // marcatori B/N: [S]=staff [F]=free
+    let mark='';
+    if(isStaff)mark+='★';
+    if(isFree)mark+='✦';
+    voci.push({num:c.num,nome:c.p.nome,scelta,tag,mark,sosp:false});
+  });
+  d.sosp.forEach(s=>{
+    voci.push({num:s.num,nome:s.nome,scelta:'DA COMPLETARE',tag:'—',mark:'',sosp:true});
+  });
+  voci.sort((a,b)=>(a.num==null?1:b.num==null?-1:a.num-b.num));
+
+  const titolo=EVENTO_NOME?EVENTO_NOME:((d.intest&&d.intest.length)?d.intest.join(' ').replace(/\*/g,'').trim():'Lista partecipanti raduno');
+  const oggi=new Date().toLocaleDateString('it-IT');
+
+  const righeHTML=voci.map(v=>
+    '<tr class="'+(v.sosp?'r-sosp':'')+'">'+
+    '<td class="c-num">'+fmtNum(v.num)+'</td>'+
+    '<td class="c-nome">'+escHtml(v.nome)+(v.mark?' <span class="mark">'+v.mark+'</span>':'')+'</td>'+
+    '<td class="c-scelta">'+v.scelta+'</td>'+
+    '<td class="c-tag">'+v.tag+'</td>'+
+    '<td class="c-note"><span class="box"></span></td>'+
+    '</tr>'
+  ).join('');
+
+  const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>'+escHtml(titolo)+'</title>'+
+  '<style>'+
+  '@page{size:A4 portrait;margin:18mm 16mm}'+
+  '*{box-sizing:border-box}'+
+  'body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:11.5pt}'+
+  'h1{font-size:17pt;margin:0 0 1mm;font-weight:800}'+
+  '.meta{font-size:9.5pt;color:#222;margin:0 0 2mm}'+
+  '.legenda{font-size:9pt;color:#222;margin:0 0 5mm;border-bottom:2.5px solid #000;padding-bottom:3mm}'+
+  'table{width:100%;border-collapse:collapse}'+
+  'thead{display:table-header-group}'+              /* intestazione ripetuta a ogni pagina */
+  'th{font-size:8.5pt;text-transform:uppercase;letter-spacing:.05em;text-align:left;border-bottom:2px solid #000;padding:2.5mm 2.5mm;font-weight:800}'+
+  'td{font-size:12pt;padding:4mm 2.5mm;border-bottom:1px solid #999;vertical-align:middle}'+   /* righe alte e spaziate */
+  'tbody tr:nth-child(even){background:#f2f2f2}'+    /* zebra leggera per leggibilità */
+  '.c-num{width:16mm;font-weight:800;font-variant-numeric:tabular-nums;font-size:14pt;text-align:center}'+
+  '.c-nome{font-weight:700;font-size:12.5pt}'+
+  '.mark{font-size:11pt;font-weight:800}'+
+  '.c-scelta{width:26mm;font-size:10.5pt}'+
+  '.c-tag{width:18mm;font-weight:800;text-align:center;font-size:12pt}'+
+  '.c-note{width:62mm;text-align:left}'+            /* colonna NOTE larga a destra */
+  '.box{display:inline-block;width:5mm;height:5mm;border:2px solid #000;border-radius:1mm;vertical-align:middle}'+
+  '.r-sosp{background:#e8e8e8 !important}.r-sosp td{font-style:italic}'+
+  '.r-sosp .c-scelta{font-weight:800}'+
+  'tr{break-inside:avoid}'+
+  '.foot{margin-top:7mm;font-size:8.5pt;color:#444;border-top:1px solid #999;padding-top:3mm}'+
+  '</style></head><body>'+
+  '<h1>'+escHtml(titolo)+'</h1>'+
+  '<div class="meta"><b>'+voci.length+' partecipanti</b> &nbsp;·&nbsp; stampato il '+oggi+'</div>'+
+  '<div class="legenda">★ Staff &nbsp;&nbsp; ✦ Free &nbsp;&nbsp; Pranzo = kit+pranzo · Kit = solo kit · Bimbo = omaggio bimbo &nbsp;·&nbsp; <b>casella ☐ nelle Note: spunta alla consegna del set</b></div>'+
+  '<table><thead><tr>'+
+  '<th class="c-num">N°</th><th>Nome e cognome</th><th>Scelta</th><th>T-shirt</th><th>Note / consegna ☐</th>'+
+  '</tr></thead><tbody>'+righeHTML+'</tbody></table>'+
+  '<div class="foot">Documento interno organizzazione · uso accrediti al raduno</div>'+
+  '</body></html>';
+
+  const w=window.open('','_blank');
+  if(!w){toast('Consenti i popup per la stampa');return;}
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // do tempo al rendering, poi apro la stampa (da lì: Salva come PDF)
+  setTimeout(()=>{w.focus();w.print();},350);
+}
+
+// costruisce le voci semplici: N° - Nome - Scelta - Taglia (senza dati economici/stato)
+function vociSemplici(){
+  const d=window._calc;if(!d)return null;
+  let maxNum=0;
+  d.computed.forEach(c=>{if(c.num!=null&&c.num>maxNum)maxNum=c.num;});
+  d.sosp.forEach(s=>{if(s.num!=null&&s.num>maxNum)maxNum=s.num;});
+  const width=maxNum>99?3:2;
+  const fmtNum=n=>n!=null?String(n).padStart(width,'0'):'—';
+  const voci=[];
+  d.computed.forEach(c=>{
+    const taglie=[...c.taglie,...c.baby];
+    let scelta=c.isBimboRow?'Bimbo':(c.pranzo?'Pranzo':'Kit');
+    const tag=taglie.length?taglie.join('+'):'—';
+    voci.push({num:c.num,nome:c.p.nome,scelta,tag,sosp:false});
+  });
+  d.sosp.forEach(s=>voci.push({num:s.num,nome:s.nome,scelta:'da completare',tag:'—',sosp:true}));
+  voci.sort((a,b)=>(a.num==null?1:b.num==null?-1:a.num-b.num));
+  return {voci,fmtNum,d};
+}
+
+function copiaListaSemplice(){
+  const r=vociSemplici();if(!r){toast('Calcola prima la lista');return;}
+  const titolo=EVENTO_NOME||'Lista partecipanti';
+  const righe=r.voci.map(v=>r.fmtNum(v.num)+' - '+v.nome+' · '+v.scelta+(v.tag!=='—'?' · t-shirt '+v.tag:''));
+  const testo=titolo+'\n'+'('+r.voci.length+' partecipanti)\n'+'─────────────\n'+righe.join('\n');
+  navigator.clipboard.writeText(testo).then(()=>toast('Lista semplificata copiata')).catch(()=>{window.prompt('Copia la lista:',testo);});
+}
+
+function copiaRiep(){
+  const d=window._calc;if(!d)return;
+  let t='🏍 RIEPILOGO RADUNO\n─────────────\n';
+  t+='Confermati: '+(d.computed.length-d.nBimbi)+' (pranzo '+d.nPranzo+', kit '+d.nKit+')\n';
+  if(d.nBimbi)t+='Bimbi (gratis): '+d.nBimbi+'\n';
+  t+='In sospeso: '+d.sosp.length+'\n';
+  t+='Totale atteso: '+d.totale+' €\nIncassato: '+d.incassato+' € · Manca: '+d.mancante+' €\n─────────────\n';
+  t+='MAGLIETTE ('+(d.nTs+d.nTsBaby)+')\n';
+  TAGLIE.forEach(x=>{if(d.conteggio[x]>0)t+=x+': '+d.conteggio[x]+'\n'});
+  Object.entries(d.babyCount).forEach(([b,c])=>t+='bimbo '+b+': '+c+'\n');
+  navigator.clipboard.writeText(t).then(()=>toast('Riepilogo copiato')).catch(()=>toast('Copia non riuscita'));
+}
+
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),1800);}
+function escHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function escAttr(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+</script>
+</body>
+</html>
