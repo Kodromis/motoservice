@@ -44,6 +44,32 @@
   .cfg-grid input:focus{outline:none;border-color:var(--amber)}
   .save-note{font-size:12.5px;color:var(--fog);line-height:1.55;margin:0}
   .save-note b{color:var(--paper)}
+  /* toggle vista */
+  .dett-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:24px 0 10px}
+  .vista-toggle{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .vista-toggle button{border:none;border-radius:0;padding:7px 14px;font-size:13px;background:var(--asphalt);color:var(--fog)}
+  .vista-toggle button.act{background:var(--amber);color:var(--asphalt)}
+  /* pulsante rimetti in sospeso */
+  .editbtns button.undo{color:var(--sky);border-color:var(--sky)}
+  /* vista compatta */
+  .cd-legenda{font-size:11.5px;color:var(--fog);margin-bottom:10px;line-height:1.5}
+  .cd-legenda b{color:var(--paper)}
+  .cd-list{display:flex;flex-direction:column;gap:2px}
+  .cd-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+  .cd-row:hover{background:var(--asphalt)}
+  .cd-row.is-paid{background:rgba(94,194,122,.07)}
+  .cd-num{min-width:30px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums;color:var(--chrome);font-size:14px}
+  .cd-num.iddup{color:var(--red)}
+  .cd-pal{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+  .cd-pal.ok{color:var(--green)}.cd-pal.no{color:var(--fog)}.cd-pal.gratis{color:var(--line)}
+  .cd-name{flex:1;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cd-name.n-staff{color:var(--amber);font-weight:800}.cd-name.n-free{color:var(--sky);font-weight:700}
+  .cd-sym{margin-right:5px}
+  .cd-pk{width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;font-size:11px;font-weight:800;flex-shrink:0}
+  .cd-pk.pk-P{background:var(--amber);color:var(--asphalt)}
+  .cd-pk.pk-K{background:var(--chrome);color:var(--asphalt)}
+  .cd-pk.pk-B{background:var(--sky);color:var(--asphalt)}
+  .cd-tag{min-width:42px;text-align:center;font-weight:800;font-size:13px;color:var(--paper);flex-shrink:0}
   .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
   @media(min-width:620px){.stats{grid-template-columns:repeat(4,1fr)}}
   .stat{background:var(--asphalt);border:1px solid var(--line);border-radius:11px;padding:15px}
@@ -476,6 +502,7 @@ function initEventi(){
 // NB: non è sicurezza vera (è leggibile nel codice), serve solo a tenere lontani i curiosi.
 const ADMIN_PIN="1234";
 let adminMode=false;
+let vistaCompatta=false;  // toggle vista lista compatta vs tabella completa
 function toggleAdmin(){
   if(adminMode){
     // disattiva subito
@@ -683,6 +710,7 @@ function render(data){
         '<button class="'+(pranzo?'act':'')+'" onclick="setPranzo(\''+kEsc+'\',true)">Pranzo</button>'+
         '<button class="'+(!pranzo?'act':'')+'" onclick="setPranzo(\''+kEsc+'\',false)">Kit</button>'+
         (haTaglia?'<button class="'+(c.tshirtTolta?'act':'')+'" onclick="toggleTshirt(\''+kEsc+'\')">'+(c.tshirtTolta?'+ maglia':'– maglia')+'</button>':'')+
+        (p.daSosp?'<button class="undo" onclick="sospRimetti(\''+kEsc+'\')" title="Rimetti tra i sospesi">↩ sospeso</button>':'')+
         '</div>';
     }
 
@@ -707,6 +735,30 @@ function render(data){
       '<td class="eur" data-lab="Dovuto">'+((isBimboRow||isFree)?'0':q)+'&nbsp;€</td></tr>';
   }).join('');
 
+  // === righe VISTA COMPATTA ===
+  const rowsCompatte=computed.map((c)=>{
+    const {p,key,isBimboRow,pranzo,taglie,baby}=c;
+    const isFree=!!freebie[key], isStaff=!!staff[key];
+    const paid=!!pagato[key];
+    const gratis=isBimboRow||isFree;
+    const numDup=p.num!=null&&data.duplicati&&data.duplicati.some(d=>String(d.num)===String(p.num));
+    const numTxt=(p.num!=null)?p.num:'?';
+    const nameClass=isStaff?'n-staff':(isFree?'n-free':'');
+    let sym='';if(isStaff)sym+='★';if(isFree)sym+='✦';
+    const tg=[...taglie,...baby];
+    const tagTxt=tg.length?tg.join('+'):'—';
+    // pallino pagamento: pieno verde=pagato, vuoto=da pagare, grigio=gratis (bimbo/free)
+    const pal=gratis?'<span class="cd-pal gratis" title="gratis">○</span>'
+      :(paid?'<span class="cd-pal ok" title="pagato">●</span>':'<span class="cd-pal no" title="da pagare">○</span>');
+    const pk=isBimboRow?'B':(pranzo?'P':'K'); // P=pranzo K=kit B=bimbo
+    return '<div class="cd-row'+(paid&&!gratis?' is-paid':'')+'" onclick="togglePaid(\''+escAttr(key)+'\')" title="Tocca per segnare pagato/non pagato">'+
+      '<span class="cd-num'+(numDup?' iddup':'')+'">'+numTxt+'</span>'+
+      pal+
+      '<span class="cd-name '+nameClass+'">'+(sym?'<span class="cd-sym">'+sym+'</span>':'')+escHtml(p.nome)+'</span>'+
+      '<span class="cd-pk pk-'+pk+'">'+pk+'</span>'+
+      '<span class="cd-tag">'+tagTxt+'</span>'+
+      '</div>';
+  }).join('');
   const mancante=totale-incassato;
   let nFree=0,nStaff=0,valFree=0;
   computed.forEach(c=>{
@@ -768,9 +820,19 @@ function render(data){
     errHTML+dupHTML+sospHTML+
     '<div class="blocklab">Magliette adulto · '+nTs+' pezzi</div><div class="sizes">'+sizesHTML+'</div>'+
     (babyHTML?'<div class="blocklab">Magliette bimbo · '+nTsBaby+' pezzi</div><div class="sizes">'+babyHTML+'</div>':'')+
-    '<div class="blocklab">Dettaglio · il N° è l\'ID ufficiale del partecipante (moto, set, t-shirt)</div>'+
-    '<table><thead><tr><th>N°</th><th>Nome</th><th>Scelta</th><th>Correggi</th><th>Pagato</th><th style="text-align:right">Dovuto</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    '<div class="dett-head">'+
+      '<div class="blocklab" style="margin:0">Dettaglio · il N° è l\'ID ufficiale (moto, set, t-shirt)</div>'+
+      '<div class="vista-toggle">'+
+        '<button class="'+(!vistaCompatta?'act':'')+'" onclick="setVista(false)">Completa</button>'+
+        '<button class="'+(vistaCompatta?'act':'')+'" onclick="setVista(true)">Lista</button>'+
+      '</div>'+
+    '</div>'+
+    (vistaCompatta
+      ? '<div class="cd-legenda">● pagato · ○ da pagare/gratis · <b>P</b> pranzo · <b>K</b> kit · <b>B</b> bimbo · ★ staff · ✦ free · tocca una riga per segnare pagato</div><div class="cd-list">'+rowsCompatte+'</div>'
+      : '<table><thead><tr><th>N°</th><th>Nome</th><th>Scelta</th><th>Correggi</th><th>Pagato</th><th style="text-align:right">Dovuto</th></tr></thead><tbody>'+rows+'</tbody></table>');
 }
+
+function setVista(c){vistaCompatta=c;calcola();}
 
 function togglePaid(k){pagato[k]=!pagato[k];calcola();}
 function toggleFree(k){freebie[k]=!freebie[k];if(!freebie[k])delete freebie[k];calcola();}
@@ -779,10 +841,15 @@ function setPranzo(k,val){if(!override[k])override[k]={};override[k].pranzo=val;
 function toggleTshirt(k){dropTshirt[k]=!dropTshirt[k];calcola();}
 
 // --- gestione sospesi ---
-function sospSet(k,campo,val){if(!sospDraft[k])sospDraft[k]={};sospDraft[k][campo]=val;calcola();}
+function sospSet(k,campo,val){
+  if(!sospDraft[k])sospDraft[k]={};
+  // toggle: se ri-clicco l'opzione già attiva, la annullo
+  if(sospDraft[k][campo]===val) delete sospDraft[k][campo];
+  else sospDraft[k][campo]=val;
+  calcola();
+}
 function sospTaglia(k,val){
   if(!sospDraft[k])sospDraft[k]={};
-  sospDraft[k].taglia = (val===''||val==='NOTS') ? (val==='NOTS'?null:undefined) : val;
   if(val==='NOTS')sospDraft[k].taglia=null;       // ha scelto: nessuna t-shirt
   else if(val==='')delete sospDraft[k].taglia;    // non ha ancora scelto
   else sospDraft[k].taglia=val;
@@ -795,6 +862,13 @@ function sospConferma(k){
   delete sospDraft[k];
   calcola();
   toast('Spostato in lista');
+}
+// riporta in sospeso un partecipante completato per errore
+function sospRimetti(k){
+  delete resolveSosp[k];
+  delete sospDraft[k];
+  calcola();
+  toast('Rimesso in sospeso');
 }
 
 function salvaRegistro(){
